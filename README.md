@@ -12,10 +12,16 @@ git clone https://github.com/leigh-jewell/dnaspaces-helper.git
 ### Prerequisites
 
 * Install [Python 3.7+](https://www.python.org/downloads/) with the appropriate distribution for your OS.
-* Install [Pipenv](https://pipenv-fork.readthedocs.io/en/latest/) using pip which should have been installed with Python 3.7+
+* Install [Pipenv](https://pipenv-fork.readthedocs.io/en/latest/) using pip which should have been installed with Python3
+simply run:
 ```
 pip install pipenv
 ```
+Or if you are using [Homebrew](https://brew.sh/) simply run:
+```
+brew install pipenv
+```
+
 * [Cisco DNA Spaces](https://dnaspaces.io) To authenticate with DNA Spaces you need to create a token. 
 1. Browse to [Detect and Locate](https://dnaspaces.io/locate/) 
 2. Click on the menu bar and select "Notifications"
@@ -33,7 +39,7 @@ pipenv install --ignore-pipfile
 
 ## Running the scrips
 
-The script will use the environment variable 'TOKEN' to authenticate to DNA Spaces. You will need to set this accordin
+The script will use the environment variable 'TOKEN' to authenticate to DNA Spaces. You will need to set this according
 to your OS.
 
 OSX:
@@ -43,6 +49,11 @@ export TOKEN="abcdefghijkl"
 Windows10:
 ```
 set TOKEN "abcdefghijkl"
+```
+
+Use the Pipenv shell to ensure you access the virtual environment created:
+```
+pipenv shell
 ```
 
  You can now run the scripts:
