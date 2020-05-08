@@ -1,19 +1,19 @@
 # Cisco DNA Spaces Helper
 
-A small collection of example Python scripts to easily extract data from Cisco DNA Spaces. Initially the scripts will
-concentrate on location tracking to help with finding where people have travelled.
+A small collection of example Python scripts to easily extract data from [Cisco DNA Spaces](https://dnaspaces.io). 
+Initially the scripts will concentrate on location tracking to help with finding where people have travelled.
 
 ## Getting Started
-Clone this repository into a directory:
+* Have a look at the Cisco DNA Spaces API over at [DevNet](https://developer.cisco.com/docs/dna-spaces/#!dna-spaces-location-cloud-api).
+To get familar with the APIs available.
+* Clone this repository into a directory to get the helper scripts:
 ```
 git clone https://github.com/leigh-jewell/dnaspaces-helper.git
 ```
-
 ### Prerequisites
 
 * Install [Python 3.7+](https://www.python.org/downloads/) with the appropriate distribution for your OS.
-* Install [Pipenv](https://pipenv-fork.readthedocs.io/en/latest/) using pip which should have been installed with Python3
-simply run:
+* Install [Pipenv](https://pipenv-fork.readthedocs.io/en/latest/) using pip which should have been installed with Python3:
 ```
 pip install pipenv
 ```
@@ -22,7 +22,8 @@ Or if you are using [Homebrew](https://brew.sh/) simply run:
 brew install pipenv
 ```
 
-* [Cisco DNA Spaces](https://dnaspaces.io) To authenticate with DNA Spaces you need to create a token. 
+* For your script to authenticate with [Cisco DNA Spaces](https://dnaspaces.io) you need to create a token in your account.
+Instructions are shown on [DevNet](https://developer.cisco.com/docs/dna-spaces/#!getting-started). Otherwise, simply follow these steps: 
 1. Browse to [Detect and Locate](https://dnaspaces.io/locate/) 
 2. Click on the menu bar and select "Notifications"
 3. Click on "API Keys"
