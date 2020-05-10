@@ -22,12 +22,13 @@ def get_config():
 
 def get_client_history():
     token = get_config()
+    # DNA spaces will return 1 day of history data relevant to time zone.
+    url = "https://dnaspaces.io/api/location/v1/history?username=aalm949&timeZone=12" 
     if len(token) > 0:
         token_str = "Bearer " + token
         headers = {"Authorization": token_str}
         print("Connecting to DNA Spaces. This may take a minute or two.")
-        with requests.get("https://dnaspaces.io/api/location/v1/history",
-                          headers=headers, stream=True) as response:
+        with requests.get(url, headers=headers, stream=True) as response:
             response.raise_for_status()
             if response.status_code == 200:
                 print("Successfully connected to DNA Spaces. Writing data to file. This will take a while.")
