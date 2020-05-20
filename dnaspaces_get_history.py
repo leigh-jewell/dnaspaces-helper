@@ -22,8 +22,8 @@ def get_config():
 
 def get_client_history():
     token = get_config()
-    # DNA spaces will return 1 day of history data relevant to time zone.
-    url = "https://dnaspaces.io/api/location/v1/history?timeZone=12"
+    # DNA spaces will return 1 day of history data.
+    url = "https://dnaspaces.io/api/location/v1/history"
     if len(token) > 0:
         token_str = "Bearer " + token
         headers = {"Authorization": token_str}
