@@ -4,11 +4,8 @@
 #
 # You need to set your environment variable TOKEN to the token you configure in Cisco DNA Spaces. See README for
 # more details.
-
-from os import getpid
-from time import strftime
 from argparse import ArgumentParser
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 import requests
 import logging
 from os import path, access, W_OK, environ
@@ -30,7 +27,7 @@ def add_arguments():
     a_parser.add_argument("-et", "--end_time", dest="end_time", type=datetime.fromisoformat,
                           help="End time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]")
     a_parser.add_argument("-tz", "--timezone", dest="timezone", type=str, choices=pytz.all_timezones,
-                        help="Time zone name as per https://en.wikipedia.org/wiki/List_of_tz_database_time_zones")
+                          help="Time zone name as per https://en.wikipedia.org/wiki/List_of_tz_database_time_zones")
     a_parser.add_argument("-f", "--filename", dest="filename", type=str,
                           help="Filename to write the client history data into.")
     a_parser.add_argument("-ct", "--convert_time", dest="convert_time", type=bool, default=False,
@@ -50,12 +47,10 @@ def get_config():
 def check_file_writable(full_file_name):
     if path.exists(full_file_name):
         # path exists
-        if path.isfile(full_file_name): # is it a file or a dir?
-            # also works when file is a link and the target is writable
+        if path.isfile(full_file_name):
             return access(full_file_name, W_OK)
         else:
-            return False # path is a dir, so cannot write as a file
-    # target does not exist, check perms on parent dir
+            return False
     parent_dir = path.dirname(full_file_name)
     if not parent_dir:
         parent_dir = '.'

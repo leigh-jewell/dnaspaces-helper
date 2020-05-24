@@ -60,7 +60,6 @@ def add_timezone(time_no_tz, tz):
         else:
             time_tz = time_no_tz.astimezone(pytz.timezone(tz))
             logging.debug(f"Using timezone parameter {time_tz.tzinfo} for time {time_no_tz}")
-    print(type(time_tz))
     return time_tz
 
 
