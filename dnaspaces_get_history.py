@@ -10,45 +10,10 @@ from time import strftime
 from argparse import ArgumentParser
 from datetime import datetime, timedelta, timezone
 import requests
-import os
 import logging
-
-
-def valid_time(start, end):
-    max_historical_time = datetime.now(timezone.utc) - timedelta(days=30)
-    min_time = datetime.now(timezone.utc)
-    valid = True
-    if start < max_historical_time:
-        logging.error("Start time cannot be more than 30 days in the past.")
-        valid = False
-    if start > end + timedelta(days=30):
-        logging.error("End time cannot be greater than 30 days after start time.")
-        valid = False
-    if end > min_time:
-        logging.error("End time cannot be in the future.")
-        valid = False
-    if start > end:
-        logging.error("Start time cannot be before end time")
-        valid = False
-    return valid
-
-
-def date_range(start=None, end=None):
-    # Create a list of tuples (start_time, end_time) that are each 1 day apart + end time
-    if start is None:
-        start = datetime.now(timezone.utc)
-    if end is None:
-        end = start + timedelta(days=1)
-    time_range_list = []
-    if valid_time(start, end):
-        one_day = timedelta(days=1)
-        time_range_list = []
-        while start + one_day < end:
-            time_range_list.append((start, start + one_day))
-            start += one_day
-        time_range_list.append((start, end))
-    logging.debug(f"Split time range into {len(time_range_list)} days")
-    return time_range_list
+from os import path, access, W_OK, environ
+from get_date_range import get_date_range
+from convert_history import convert_history
 
 
 def add_arguments():
@@ -64,69 +29,56 @@ def add_arguments():
                           help="End time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]")
     a_parser.add_argument("-tz", "--timezone", dest="timezone", type=int, choices=range(-24, 25), metavar="[-24 to 24]",
                           help="Time zone offset in hours minutes HH:MM e.g. 10:00 or -4:00")
+    a_parser.add_argument("-f", "--filename", dest="filename", type=str,
+                          help="Filename to write the client history data into.")
+    a_parser.add_argument("-ct", "--convert_time", dest="convert_time", type=bool, default=False,
+                          help="Convert timestamp columns to local date time according to timezone parameter.")
     return a_parser
 
 
-def add_timezone(time_no_tz, tz):
-    if time_no_tz.tzinfo is not None:
-        logging.debug("Timezone has been provided in ISO string")
-        time_tz = args.start_time
-    else:
-        logging.debug("No timezone in time provided")
-        if tz is None:
-            logging.debug("Using system timezone")
-            time_tz = time_no_tz.astimezone()
-        else:
-            logging.debug("Using timezone parameter for timezone")
-            time_tz = time_no_tz.replace(tzinfo=timezone(timedelta(hours=tz)))
-    return time_tz
-
-
-def get_time_filters(test_args):
-    parser = add_arguments()
-    if test_args:
-        args = parser.parse_args(test_args)
-    else:
-        args = parser.parse_args()
-    logging.debug(args)
-    start_time_tz = add_timezone(args.start_time, args.timezone)
-    end_time_tz = add_timezone(args.end_time, args.timezone)
-    return start_time_tz, end_time_tz
-
-
-def convert_timestamp_millisecond(time_convert):
-    ms_real = time_convert.timestamp()*1000
-    ms_int = round(ms_real)
-    return str(ms_int)
-
-
 def get_config():
-    if 'TOKEN' in os.environ:
-        token = os.environ['TOKEN']
+    if 'TOKEN' in environ:
+        token = environ['TOKEN']
     else:
         logging.error("Please set environment variable TOKEN before running.")
         token = ""
     return token
 
 
-def get_client_history(time_tuples_list):
+def check_file_writable(full_file_name):
+    if path.exists(full_file_name):
+        # path exists
+        if path.isfile(full_file_name): # is it a file or a dir?
+            # also works when file is a link and the target is writable
+            return access(full_file_name, W_OK)
+        else:
+            return False # path is a dir, so cannot write as a file
+    # target does not exist, check perms on parent dir
+    parent_dir = path.dirname(full_file_name)
+    if not parent_dir:
+        parent_dir = '.'
+    # target is creatable if parent dir is writable
+    return access(parent_dir, W_OK)
+
+
+def get_client_history(time_tuples_list, write_file):
     token = get_config()
     # DNA spaces will return 1 day of history data.
     url = "https://dnaspaces.io/api/location/v1/history"
-    if len(token) > 0:
+    if check_file_writable(write_file):
+        logging.debug(f"File {write_file} is suitable for writing")
+        valid_file = True
+    else:
+        logging.error(f"File {write_file} cannot be written. Check path and permissions")
+        valid_file = False
+    if len(token) > 0 and valid_file:
         token_str = "Bearer " + token
         headers = {"Authorization": token_str}
         logging.info("Connecting to DNA Spaces. This may take a minute or two.")
-        pid = str(getpid())
-        filename = "client-history" + "-" + pid + "-" + strftime("%Y%m%d%H%M") + ".csv"
-        logging.debug(f"Using filename {filename}")
         lines_read = 0
         with open(filename, "w") as f:
             for (start, end) in time_tuples_list:
-                logging.debug(f"Using filter start {start} end {end}")
-                logging.debug(f"Using filter utc start {start_time.astimezone(timezone.utc)} end {end_time.astimezone(timezone.utc)}")
-                payload = {"startTime": convert_timestamp_millisecond(start),
-                           "endTime": convert_timestamp_millisecond(end)}
+                payload = {"startTime": start, "endTime": end}
                 logging.debug(f"Using URL params {payload}")
                 with requests.get(url, params=payload, headers=headers, stream=True) as response:
                     if response.status_code == 200:
@@ -134,11 +86,21 @@ def get_client_history(time_tuples_list):
                         for chunk in response.iter_lines(decode_unicode=True):
                             print(chunk, file=f)
                             lines_read += 1
-                        logging.info(f"Wrote {lines_read:,} lines to file {filename}.")
+                        logging.info(f"Wrote {lines_read:,} lines to file {write_file}.")
                     else:
                         logging.error("Error: unable to connect to DNA Spaces. Got status code", response.status_code)
                         break
     logging.info("Finished.")
+    return filename
+
+
+def get_filename(fn):
+    if fn is None:
+        generated_fn = "client-history" + "-" + datetime.now().strftime("%Y%m%d%H%M") + ".csv"
+        logging.debug(f"No filename provided, generated filename {generated_fn}.")
+        return generated_fn
+    else:
+        return fn
 
 
 if __name__ == '__main__':
@@ -147,6 +109,12 @@ if __name__ == '__main__':
                         datefmt='%H:%M:%S',
                         filemode="a",
                         level=logging.DEBUG)
-    start_time, end_time = get_time_filters(['-st', '2020-05-21 10:00', '-et', '2020-05-21 11:00', '-tz', '10'])
-    time_range = date_range(start_time, end_time)
-    get_client_history(time_range)
+    parser = add_arguments()
+    args = parser.parse_args()
+    logging.debug(args)
+    time_split = get_date_range(args.start_time, args.end_time, args.timezone)
+    filename = get_filename(args.filename)
+    get_client_history(time_split, filename)
+    if args.convert_time:
+        logging.debug(f"Converting filename {filename} timestamps to local time with timezone f{args.timezone}.")
+        convert_history(filename, args.timezone)
