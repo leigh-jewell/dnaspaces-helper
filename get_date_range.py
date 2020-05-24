@@ -1,6 +1,8 @@
 from argparse import ArgumentParser
 from datetime import datetime, timedelta, timezone
 import logging
+import pytz
+from tzlocal import get_localzone
 
 
 def valid_time(start, end):
@@ -35,7 +37,7 @@ def split_dates(start=None, end=None):
         while start + one_day < end:
             time_range_list.append((start, start + one_day))
             start += one_day
-        time_range_list.append((convert_timestamp_millisecond(start), convert_timestamp_millisecond(end)))
+        time_range_list.append((start, end))
     logging.debug(f"Split time range into {len(time_range_list)} days")
     return time_range_list
 
@@ -47,11 +49,18 @@ def add_timezone(time_no_tz, tz):
     else:
         logging.debug(f"No timezone in time {time_no_tz} provided")
         if tz is None:
-            time_tz = time_no_tz.astimezone()
+            local_tz = pytz.timezone(get_localzone())
+            time_tz = time_no_tz.astimezone(local_tz)
+            logging.debug(f"Adding system timezone {time_tz.tzinfo} to time {time_no_tz}")
+        elif tz not in pytz.all_timezones:
+            logging.error(f"Timezone {tz} provided is not in time zone list. Using local")
+            local_tz = pytz.timezone(get_localzone())
+            time_tz = time_no_tz.astimezone(local_tz)
             logging.debug(f"Adding system timezone {time_tz.tzinfo} to time {time_no_tz}")
         else:
-            logging.debug(f"Using timezone parameter {tz} for time {time_no_tz}")
-            time_tz = time_no_tz.replace(tzinfo=timezone(timedelta(hours=tz)))
+            time_tz = time_no_tz.astimezone(pytz.timezone(tz))
+            logging.debug(f"Using timezone parameter {time_tz.tzinfo} for time {time_no_tz}")
+    print(type(time_tz))
     return time_tz
 
 
@@ -77,10 +86,8 @@ if __name__ == '__main__':
                         help="Start time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]")
     parser.add_argument("end_time", type=datetime.fromisoformat,
                         help="End time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]")
-    parser.add_argument("-tz", "--timezone",
-                        dest="timezone", type=int, choices=range(-24, 25),
-                        metavar="[-24 to 24]", action='store',
-                        help="Time zone offset in hours minutes HH:MM e.g. 10:00 or -4:00")
+    parser.add_argument("-tz", "--timezone", dest="timezone", type=str, choices=pytz.all_timezones,
+                        help="Time zone name as per https://en.wikipedia.org/wiki/List_of_tz_database_time_zones")
     args = parser.parse_args()
     time_range = get_date_range(args.start_time, args.end_time, args.timezone)
     for (start_time, end_time) in time_range:

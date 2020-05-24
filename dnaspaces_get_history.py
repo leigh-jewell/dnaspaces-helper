@@ -14,6 +14,8 @@ import logging
 from os import path, access, W_OK, environ
 from get_date_range import get_date_range
 from convert_history import convert_history
+from get_date_range import convert_timestamp_millisecond
+import pytz
 
 
 def add_arguments():
@@ -27,8 +29,8 @@ def add_arguments():
                                "End time will be start time +1 day if not provided.")
     a_parser.add_argument("-et", "--end_time", dest="end_time", type=datetime.fromisoformat,
                           help="End time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]")
-    a_parser.add_argument("-tz", "--timezone", dest="timezone", type=int, choices=range(-24, 25), metavar="[-24 to 24]",
-                          help="Time zone offset in hours minutes HH:MM e.g. 10:00 or -4:00")
+    a_parser.add_argument("-tz", "--timezone", dest="timezone", type=str, choices=pytz.all_timezones,
+                        help="Time zone name as per https://en.wikipedia.org/wiki/List_of_tz_database_time_zones")
     a_parser.add_argument("-f", "--filename", dest="filename", type=str,
                           help="Filename to write the client history data into.")
     a_parser.add_argument("-ct", "--convert_time", dest="convert_time", type=bool, default=False,
@@ -78,7 +80,8 @@ def get_client_history(time_tuples_list, write_file):
         lines_read = 0
         with open(filename, "w") as f:
             for (start, end) in time_tuples_list:
-                payload = {"startTime": start, "endTime": end}
+                payload = {"startTime": convert_timestamp_millisecond(start),
+                           "endTime": convert_timestamp_millisecond(end)}
                 logging.debug(f"Using URL params {payload}")
                 with requests.get(url, params=payload, headers=headers, stream=True) as response:
                     if response.status_code == 200:
