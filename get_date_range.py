@@ -9,16 +9,22 @@ def valid_time(start, end):
     max_historical_time = datetime.now(timezone.utc) - timedelta(days=30)
     min_time = datetime.now(timezone.utc)
     valid = True
-    if start < max_historical_time:
+    if start.tzinfo is None:
+        logging.error("Start time has no timezone. Can't compare")
+        valid = False
+    elif end.tzinfo is None:
+        logging.error("End time has no timezone. Can't compare")
+        valid = False
+    elif start < max_historical_time:
         logging.error("Start time cannot be more than 30 days in the past.")
         valid = False
-    if start > end + timedelta(days=30):
+    elif start > end + timedelta(days=30):
         logging.error("End time cannot be greater than 30 days after start time.")
         valid = False
-    if end > min_time:
+    elif end > min_time:
         logging.error("End time cannot be in the future.")
         valid = False
-    if start > end:
+    elif start > end:
         logging.error("Start time cannot be before end time")
         valid = False
     return valid
@@ -42,7 +48,7 @@ def split_dates(start=None, end=None):
     return time_range_list
 
 
-def add_timezone(time_no_tz, tz):
+def add_timezone(time_no_tz, tz=None):
     if time_no_tz.tzinfo is not None:
         logging.debug("Timezone has been provided in ISO string")
         time_tz = args.start_time
@@ -85,7 +91,7 @@ if __name__ == '__main__':
                         help="Start time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]")
     parser.add_argument("end_time", type=datetime.fromisoformat,
                         help="End time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]")
-    parser.add_argument("-tz", "--timezone", dest="timezone", type=str, choices=pytz.all_timezones,
+    parser.add_argument("-tz", "--timezone", dest="timezone", type=str,
                         help="Time zone name as per https://en.wikipedia.org/wiki/List_of_tz_database_time_zones")
     args = parser.parse_args()
     time_range = get_date_range(args.start_time, args.end_time, args.timezone)

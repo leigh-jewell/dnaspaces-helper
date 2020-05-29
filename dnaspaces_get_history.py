@@ -104,7 +104,7 @@ def get_filename(fn):
 if __name__ == '__main__':
     logging.basicConfig(format='%(levelname)s:%(asctime)s:%(funcName)s():%(message)s',
                         filename="get_history.log",
-                        datefmt='%H:%M:%S',
+                        datefmt='%Y-%m-%d %H:%M.%S',
                         filemode="a",
                         level=logging.DEBUG)
     parser = add_arguments()

@@ -33,7 +33,13 @@ from tzlocal import get_localzone
 
 
 def change_timezone(col, timezone):
-    return col.dt.tz_convert(tz=timezone)
+    # Must have tz set otherwise will fail
+    try:
+        convert_col = col.dt.tz_convert(tz=timezone)
+    except AttributeError as e:
+        logging.error("The column is not a date time type or there is no time zone from which to converet.")
+        convert_col = col
+    return convert_col
 
 
 def timestamp_to_date(col):
@@ -47,9 +53,9 @@ def convert_history(data_file, timezone):
         df = pd.read_csv(data_file)
     except IOError as e:
         logging.error(f"Unable to open csv file to convert. Got error {e}.")
-        return False
+        return None
     # Some timestamps are zero and need to replace with Nan to avoid getting set to 1/1/1970
-    df[date_cols] = df[date_cols].replace({0: np.nan})
+    df[date_cols] = df[date_cols].replace(to_replace=0, value=np.nan)
     df.update(df[date_cols].apply(pd.to_datetime, origin='unix', unit='ms', utc=True, errors="coerce"))
     df.update(df[date_cols].apply(change_timezone, args=(timezone,)))
     new_filename = data_file.replace(".csv", "-converted.csv")
@@ -58,12 +64,8 @@ def convert_history(data_file, timezone):
         logging.info(f"Converted file written to {new_filename}.")
     except IOError as e:
         logging.error(f"Unable to write csv file {new_filename}. Got error {e}.")
-        return False
-    return True
-
-
-def get_local_tz():
-    return datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
+        return None
+    return new_filename
 
 
 if __name__ == '__main__':

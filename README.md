@@ -62,6 +62,12 @@ pipenv shell
 ```
 python dnaspaces_get_history.py
 ```
+## Options
+
+```
+python dnaspaces_get_history.py
+```
+
 
 ## Built With
 
