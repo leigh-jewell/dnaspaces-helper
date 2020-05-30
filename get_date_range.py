@@ -9,6 +9,10 @@ def valid_time(start, end):
     max_historical_time = datetime.now(timezone.utc) - timedelta(days=30)
     min_time = datetime.now(timezone.utc)
     valid = True
+    try:
+        datetime(year=start.year, month=start.month, day=start.day, hour=start.hour, minute=start.minute)
+    except ValueError:
+        logging.error("Invalid start date.")
     if start.tzinfo is None:
         logging.error("Start time has no timezone. Can't compare")
         valid = False
@@ -49,33 +53,33 @@ def split_dates(start=None, end=None):
 
 
 def add_timezone(time_no_tz, tz=None):
-    if time_no_tz.tzinfo is not None:
+    if time_no_tz.tzinfo in pytz.all_timezones:
         logging.debug("Timezone has been provided in ISO string")
-        time_tz = args.start_time
+        time_tz = time_no_tz
     else:
         logging.debug(f"No timezone in time {time_no_tz} provided")
         if tz is None:
-            local_tz = pytz.timezone(get_localzone())
-            time_tz = time_no_tz.astimezone(local_tz)
-            logging.debug(f"Adding system timezone {time_tz.tzinfo} to time {time_no_tz}")
-        elif tz not in pytz.all_timezones:
-            logging.error(f"Timezone {tz} provided is not in time zone list. Using local")
-            local_tz = pytz.timezone(get_localzone())
+            local_tz = get_localzone()
             time_tz = time_no_tz.astimezone(local_tz)
             logging.debug(f"Adding system timezone {time_tz.tzinfo} to time {time_no_tz}")
         else:
-            time_tz = time_no_tz.astimezone(pytz.timezone(tz))
-            logging.debug(f"Using timezone parameter {time_tz.tzinfo} for time {time_no_tz}")
+            try:
+                time_tz = time_no_tz.astimezone(pytz.timezone(tz))
+                logging.debug(f"Using timezone parameter {time_tz.tzinfo} for time {time_no_tz}")
+            except ValueError:
+                logging.error(f"Timezone {tz} not a valid time zone.")
+                raise ValueError("Not a valid timezone.")
+
     return time_tz
 
 
 def convert_timestamp_millisecond(time_convert):
     ms_real = time_convert.timestamp()*1000
     ms_int = round(ms_real)
-    return str(ms_int)
+    return ms_int
 
 
-def get_date_range(start, end, local_tz):
+def get_date_range(start, end, local_tz=None):
     # Assumes that start_time, end_time are datetime formatted
     start_time_tz = add_timezone(start, local_tz)
     end_time_tz = add_timezone(end, local_tz)

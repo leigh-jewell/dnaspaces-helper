@@ -15,24 +15,26 @@ from get_date_range import convert_timestamp_millisecond
 import pytz
 
 
-def add_arguments():
-    a_parser = ArgumentParser()
-    a_parser.add_argument("-st", "--start_time", dest="start_time", type=datetime.fromisoformat,
-                          help="Start time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]"
+def get_arguments(passed_in=None):
+    parser = ArgumentParser()
+    parser.add_argument("-st", "--start_time", dest="start_time", type=datetime.fromisoformat,
+                        help="Start time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]"
                                "For example:"
                                "Just date 2020-05-01"
                                "Just date and time 2020-05-01 local timezone of OS used or with -tz option"
                                "Including timezone 2020-05-01 10:00:00+10:00"
                                "End time will be start time +1 day if not provided.")
-    a_parser.add_argument("-et", "--end_time", dest="end_time", type=datetime.fromisoformat,
-                          help="End time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]")
-    a_parser.add_argument("-tz", "--timezone", dest="timezone", type=str, choices=pytz.all_timezones,
-                          help="Time zone name as per https://en.wikipedia.org/wiki/List_of_tz_database_time_zones")
-    a_parser.add_argument("-f", "--filename", dest="filename", type=str,
-                          help="Filename to write the client history data into.")
-    a_parser.add_argument("-ct", "--convert_time", dest="convert_time", type=bool, default=False,
-                          help="Convert timestamp columns to local date time according to timezone parameter.")
-    return a_parser
+    parser.add_argument("-et", "--end_time", dest="end_time", type=datetime.fromisoformat,
+                        help="End time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]")
+    parser.add_argument("-tz", "--timezone", dest="timezone", type=str, choices=pytz.all_timezones,
+                        help="Time zone name as per https://en.wikipedia.org/wiki/List_of_tz_database_time_zones")
+    parser.add_argument("-f", "--filename", dest="filename", type=str,
+                        help="Filename to write the client history data into.")
+    parser.add_argument("-ct", "--convert_time", dest="convert_time", type=bool, default=False,
+                        help="Convert timestamp columns to local date time according to timezone parameter.")
+    args = parser.parse_args(passed_in)
+    logging.debug("Got arguments", args)
+    return args
 
 
 def get_config():
@@ -92,7 +94,7 @@ def get_client_history(time_tuples_list, write_file):
     return filename
 
 
-def get_filename(fn):
+def get_filename(fn=None):
     if fn is None:
         generated_fn = "client-history" + "-" + datetime.now().strftime("%Y%m%d%H%M") + ".csv"
         logging.debug(f"No filename provided, generated filename {generated_fn}.")
@@ -107,12 +109,10 @@ if __name__ == '__main__':
                         datefmt='%Y-%m-%d %H:%M.%S',
                         filemode="a",
                         level=logging.DEBUG)
-    parser = add_arguments()
-    args = parser.parse_args()
-    logging.debug(args)
-    time_split = get_date_range(args.start_time, args.end_time, args.timezone)
-    filename = get_filename(args.filename)
+    cmd_args = get_arguments()
+    time_split = get_date_range(cmd_args.start_time, cmd_args.end_time, cmd_args.timezone)
+    filename = get_filename(cmd_args.filename)
     get_client_history(time_split, filename)
-    if args.convert_time:
+    if cmd_args.convert_time:
         logging.debug(f"Converting filename {filename} timestamps to local time with timezone f{args.timezone}.")
         convert_history(filename, args.timezone)
