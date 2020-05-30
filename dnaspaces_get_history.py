@@ -13,6 +13,7 @@ from get_date_range import get_date_range
 from convert_history import convert_history
 from get_date_range import convert_timestamp_millisecond
 import pytz
+from constants import BASE_URL
 
 
 def get_arguments(passed_in=None):
@@ -30,10 +31,12 @@ def get_arguments(passed_in=None):
                         help="Time zone name as per https://en.wikipedia.org/wiki/List_of_tz_database_time_zones")
     parser.add_argument("-f", "--filename", dest="filename", type=str,
                         help="Filename to write the client history data into.")
-    parser.add_argument("-ct", "--convert_time", dest="convert_time", type=bool, default=False,
+    parser.add_argument("-ct", "--convert_time", dest="convert_time", type=bool, default=True,
                         help="Convert timestamp columns to local date time according to timezone parameter.")
     args = parser.parse_args(passed_in)
-    logging.debug("Got arguments", args)
+    logging.debug("Got arguments " +
+                  args.start_time.strftime("%Y-%m-%d %H:%M") + " " +
+                  args.end_time.strftime("%Y-%m-%d %H:%M"))
     return args
 
 
@@ -63,7 +66,7 @@ def check_file_writable(full_file_name):
 def get_client_history(time_tuples_list, write_file):
     token = get_config()
     # DNA spaces will return 1 day of history data.
-    url = "https://dnaspaces.io/api/location/v1/history"
+    url = BASE_URL + "history"
     if check_file_writable(write_file):
         logging.debug(f"File {write_file} is suitable for writing")
         valid_file = True

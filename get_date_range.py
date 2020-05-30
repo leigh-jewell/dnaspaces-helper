@@ -3,10 +3,11 @@ from datetime import datetime, timedelta, timezone
 import logging
 import pytz
 from tzlocal import get_localzone
+from constants import MAX_DAYS
 
 
 def valid_time(start, end):
-    max_historical_time = datetime.now(timezone.utc) - timedelta(days=30)
+    max_historical_time = datetime.now(timezone.utc) - timedelta(days=MAX_DAYS)
     min_time = datetime.now(timezone.utc)
     valid = True
     try:

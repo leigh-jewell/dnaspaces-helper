@@ -3,13 +3,14 @@ from datetime import datetime, timedelta, timezone
 from get_date_range import valid_time, split_dates, add_timezone, convert_timestamp_millisecond, get_date_range
 from tzlocal import get_localzone
 import pytz
+from constants import MAX_DAYS
 
 
 def test_valid_time():
     no_timezone = datetime(2020, 5, 1, 1, 0, 0)
     start = datetime(2020, 5, 1, 1, 0, 0, tzinfo=timezone.utc)
     end = start + timedelta(days=5)
-    more_than_30days = start + timedelta(days=31)
+    more_than_30days = start + timedelta(days=MAX_DAYS + 1)
     start_future = datetime.now(timezone.utc) + timedelta(days=2)
     end_future = datetime.now(timezone.utc) + timedelta(days=1)
     assert not valid_time(no_timezone, no_timezone)
