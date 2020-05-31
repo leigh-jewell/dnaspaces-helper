@@ -62,6 +62,60 @@ pipenv shell
 ```
 python dnaspaces_get_history.py
 ```
+## Options
+
+```
+usage: dnaspaces_get_history.py [-h] [-st START_TIME] [-et END_TIME]
+                                [-tz TIMEZONE] [-f FILENAME] [-nc]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -st START_TIME, --start_time START_TIME
+                        Start time in ISO format [YYY-MM-DDThh:mm:ss.s+TZD] If
+                        not provided will use -1 day as start time. End time
+                        will be start time +1 day if not provided.
+  -et END_TIME, --end_time END_TIME
+                        End time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]
+  -tz TIMEZONE, --timezone TIMEZONE
+                        Time zone database name e.g. Australia/Sydney
+  -f FILENAME, --filename FILENAME
+                        Filename to write the client history data into.
+  -nc, --no_convert     Stop the conversion of timestamp to localised date
+                        time.
+```
+
+## Examples:
+
+Get the past 1 day of data in the local timezone timestamps to local date and time:
+
+```
+python dnaspaces_get_history.py 
+```
+
+Get a specific date range in the local timezone. As DNA Spaces can only do 1 day of data at a time. This call
+will break time ranges into separate 1 day requests. The date time is in ISO format.
+
+```
+python dnaspaces_get_history.py -st=2020-05-25 -et=2020-05-28
+```
+
+Get a specific date range in the local timezone and write to file output.csv
+
+```
+python dnaspaces_get_history.py -st=2020-05-25 -et=2020-05-28 -f="/tmp/output.csv"
+```
+
+Get a specific date range in the local timezone and write to file output.csv but don't convert the timestamps.
+
+```
+python dnaspaces_get_history.py -st=2020-05-25 -et=2020-05-28 -nc
+```
+
+Get a specific date range in the specified time zone.
+
+```
+python dnaspaces_get_history.py -st=2020-05-25 -et=2020-05-28 -tz=Australia/Sydney
+```
 
 ## Built With
 
