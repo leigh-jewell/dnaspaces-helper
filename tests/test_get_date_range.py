@@ -7,9 +7,9 @@ from constants import MAX_DAYS
 
 
 def test_valid_time():
-    no_timezone = datetime(2020, 5, 1, 1, 0, 0)
-    start = datetime(2020, 5, 1, 1, 0, 0, tzinfo=timezone.utc)
-    end = start + timedelta(days=5)
+    no_timezone = datetime.now()
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(days=5)
     more_than_30days = start + timedelta(days=MAX_DAYS + 1)
     start_future = datetime.now(timezone.utc) + timedelta(days=2)
     end_future = datetime.now(timezone.utc) + timedelta(days=1)
@@ -23,8 +23,8 @@ def test_valid_time():
 
 
 def test_split_dates():
-    start = datetime(2020, 5, 1, 1, 0, 0, tzinfo=timezone.utc)
-    end = start + timedelta(days=10)
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(days=10)
     assert len(split_dates(start, end)) == 10
     assert split_dates(start, end)[0] == (start, start + timedelta(days=1))
     assert split_dates(start, end)[-1] == (start + timedelta(days=9), end)
@@ -44,11 +44,15 @@ def test_convert_timestamp_millisecond():
 
 
 def test_get_date_range():
-    start1 = datetime.fromisoformat("2020-05-01T10:00+10:00")
-    end1 = datetime.fromisoformat("2020-05-02T10:00+10:00")
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(days=1)
+    end_str = end.strftime("%Y-%m-%d")
+    start_str = start.strftime("%Y-%m-%d")
+    start1 = datetime.fromisoformat(start_str + "T10:00+10:00")
+    end1 = datetime.fromisoformat(end_str + "T10:00+10:00")
     dates1 = get_date_range(start1, end1)
-    start2 = datetime.fromisoformat("2020-05-01T10:00")
-    end2 = datetime.fromisoformat("2020-05-02T10:00")
+    start2 = datetime.fromisoformat(start_str + "T10:00")
+    end2 = datetime.fromisoformat(end_str + "T10:00")
     dates2 = get_date_range(start2, end2)
     dates3 = get_date_range(start2, end2, "Australia/Sydney")
     assert len(dates1) == 1

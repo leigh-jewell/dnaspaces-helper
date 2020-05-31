@@ -30,7 +30,7 @@ import pandas as pd
 import numpy as np
 from pytz import all_timezones
 from tzlocal import get_localzone
-
+import os
 
 def change_timezone(col, timezone):
     # Must have tz set otherwise will fail
@@ -58,14 +58,18 @@ def convert_history(data_file, timezone):
     df[date_cols] = df[date_cols].replace(to_replace=0, value=np.nan)
     df.update(df[date_cols].apply(pd.to_datetime, origin='unix', unit='ms', utc=True, errors="coerce"))
     df.update(df[date_cols].apply(change_timezone, args=(timezone,)))
-    new_filename = data_file.replace(".csv", "-converted.csv")
     try:
-        df.to_csv(new_filename, date_format='%Y-%m-%d %H:%M:%S.%f'[:-3])
-        logging.info(f"Converted file written to {new_filename}.")
+        os.rename(data_file, data_file + ".old")
     except IOError as e:
-        logging.error(f"Unable to write csv file {new_filename}. Got error {e}.")
+        logging.error(f"Tried to rename old file {data_file}.old but failed with error{e}")
+#    new_filename = data_file.replace(".csv", "-converted.csv")
+    try:
+        df.to_csv(data_file, date_format='%Y-%m-%d %H:%M:%S.%f'[:-3])
+        logging.info(f"Converted file written to {data_file}.")
+    except IOError as e:
+        logging.error(f"Unable to write csv file {data_file}. Got error {e}.")
         return None
-    return new_filename
+    return data_file
 
 
 if __name__ == '__main__':

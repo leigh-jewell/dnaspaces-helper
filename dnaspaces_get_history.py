@@ -5,38 +5,38 @@
 # You need to set your environment variable TOKEN to the token you configure in Cisco DNA Spaces. See README for
 # more details.
 from argparse import ArgumentParser
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import requests
 import logging
 from os import path, access, W_OK, environ
 from get_date_range import get_date_range
 from convert_history import convert_history
 from get_date_range import convert_timestamp_millisecond
-import pytz
-from constants import BASE_URL
+from constants import URL
+from tzlocal import get_localzone
 
 
 def get_arguments(passed_in=None):
     parser = ArgumentParser()
     parser.add_argument("-st", "--start_time", dest="start_time", type=datetime.fromisoformat,
-                        help="Start time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]"
-                               "For example:"
-                               "Just date 2020-05-01"
-                               "Just date and time 2020-05-01 local timezone of OS used or with -tz option"
-                               "Including timezone 2020-05-01 10:00:00+10:00"
+                        default=datetime.now(timezone.utc) - timedelta(days=1),
+                        help="Start time in ISO format [YYY-MM-DDThh:mm:ss.s+TZD] "
+                               "If not provided will use -1 day as start time. "
                                "End time will be start time +1 day if not provided.")
     parser.add_argument("-et", "--end_time", dest="end_time", type=datetime.fromisoformat,
+                        default=datetime.now(timezone.utc),
                         help="End time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]")
-    parser.add_argument("-tz", "--timezone", dest="timezone", type=str, choices=pytz.all_timezones,
-                        help="Time zone name as per https://en.wikipedia.org/wiki/List_of_tz_database_time_zones")
+    parser.add_argument("-tz", "--timezone", dest="timezone", type=str, default=str(get_localzone()),
+                        help="Time zone database name e.g. Australia/Sydney")
     parser.add_argument("-f", "--filename", dest="filename", type=str,
                         help="Filename to write the client history data into.")
-    parser.add_argument("-ct", "--convert_time", dest="convert_time", type=bool, default=True,
-                        help="Convert timestamp columns to local date time according to timezone parameter.")
+    parser.add_argument("-nc", "--no_convert", dest="convert_time", default=True, action='store_false',
+                        help="Stop the conversion of timestamp to localised date time.")
     args = parser.parse_args(passed_in)
-    logging.debug("Got arguments " +
-                  args.start_time.strftime("%Y-%m-%d %H:%M") + " " +
-                  args.end_time.strftime("%Y-%m-%d %H:%M"))
+    if args is not None:
+        logging.debug("Got arguments " +
+                      args.start_time.strftime("%Y-%m-%d %H:%M") + " " +
+                      args.end_time.strftime("%Y-%m-%d %H:%M"))
     return args
 
 
@@ -63,10 +63,20 @@ def check_file_writable(full_file_name):
     return access(parent_dir, W_OK)
 
 
+def valid_date(date):
+    try:
+        datetime(date.year, date.month, date.day)
+        return True
+    except TypeError:
+        return False
+    except AttributeError:
+        return False
+
+
 def get_client_history(time_tuples_list, write_file):
     token = get_config()
+    lines_read = 0
     # DNA spaces will return 1 day of history data.
-    url = BASE_URL + "history"
     if check_file_writable(write_file):
         logging.debug(f"File {write_file} is suitable for writing")
         valid_file = True
@@ -77,24 +87,28 @@ def get_client_history(time_tuples_list, write_file):
         token_str = "Bearer " + token
         headers = {"Authorization": token_str}
         logging.info("Connecting to DNA Spaces. This may take a minute or two.")
-        lines_read = 0
-        with open(filename, "w") as f:
+        with open(write_file, "w") as f:
             for (start, end) in time_tuples_list:
-                payload = {"startTime": convert_timestamp_millisecond(start),
-                           "endTime": convert_timestamp_millisecond(end)}
-                logging.debug(f"Using URL params {payload}")
-                with requests.get(url, params=payload, headers=headers, stream=True) as response:
-                    if response.status_code == 200:
-                        logging.info("Connected to DNA Spaces. Writing data to file. This will take a while.")
-                        for chunk in response.iter_lines(decode_unicode=True):
-                            print(chunk, file=f)
-                            lines_read += 1
-                        logging.info(f"Wrote {lines_read:,} lines to file {write_file}.")
-                    else:
-                        logging.error("Error: unable to connect to DNA Spaces. Got status code", response.status_code)
-                        break
+                if valid_date(start) and valid_date(end):
+                    payload = {"startTime": convert_timestamp_millisecond(start),
+                               "endTime": convert_timestamp_millisecond(end)}
+                    logging.debug(f"Using URL params {payload}")
+                    with requests.get(URL, params=payload, headers=headers, stream=True) as response:
+                        if response.status_code == 200:
+                            logging.info("Connected to DNA Spaces. Writing data to file. This will take a while.")
+                            for chunk in response.iter_lines(decode_unicode=True):
+                                print(chunk, file=f)
+                                lines_read += 1
+                            logging.info(f"Wrote {lines_read:,} lines to file {write_file}.")
+                            successful = True
+                        else:
+                            logging.error(f"Unable to connect to {URL}. Got status code {response.status_code}" +
+                                          f"Message {response.text}")
+                            break
+                else:
+                    logging.error(f"Invalid start and/or end dates.")
     logging.info("Finished.")
-    return filename
+    return lines_read
 
 
 def get_filename(fn=None):
@@ -106,16 +120,21 @@ def get_filename(fn=None):
         return fn
 
 
-if __name__ == '__main__':
+def main(passed_args=None):
     logging.basicConfig(format='%(levelname)s:%(asctime)s:%(funcName)s():%(message)s',
                         filename="get_history.log",
                         datefmt='%Y-%m-%d %H:%M.%S',
                         filemode="a",
                         level=logging.DEBUG)
-    cmd_args = get_arguments()
+    cmd_args = get_arguments(passed_args)
     time_split = get_date_range(cmd_args.start_time, cmd_args.end_time, cmd_args.timezone)
     filename = get_filename(cmd_args.filename)
-    get_client_history(time_split, filename)
-    if cmd_args.convert_time:
-        logging.debug(f"Converting filename {filename} timestamps to local time with timezone f{args.timezone}.")
-        convert_history(filename, args.timezone)
+    lines = get_client_history(time_split, filename)
+    if lines > 0 and cmd_args.convert_time:
+        logging.debug(f"Converting filename {filename} timestamps to local time with timezone {cmd_args.timezone}.")
+        convert_history(filename, cmd_args.timezone)
+    return lines > 0
+
+
+if __name__ == '__main__':
+    main()

@@ -1,4 +1,3 @@
-import pytest
 from convert_history import change_timezone, timestamp_to_date, convert_history
 import pandas as pd
 import numpy as np
@@ -39,7 +38,7 @@ def test_convert_history():
     df_new = pd.read_csv(new_filename)
     try:
         os.remove("test_convert_history_tmp.csv")
-        os.remove(new_filename)
+        os.remove("test_convert_history_tmp.csv" + ".old")
     except OSError as e:
         logging.error("Unable to delete test files. Got error", e)
 

@@ -55,10 +55,10 @@ def split_dates(start=None, end=None):
 
 def add_timezone(time_no_tz, tz=None):
     if time_no_tz.tzinfo in pytz.all_timezones:
-        logging.debug("Timezone has been provided in ISO string")
+        logging.debug("Valid timezone has been provided in ISO string")
         time_tz = time_no_tz
     else:
-        logging.debug(f"No timezone in time {time_no_tz} provided")
+        logging.debug(f"No timezone in time {time_no_tz} exists.")
         if tz is None:
             local_tz = get_localzone()
             time_tz = time_no_tz.astimezone(local_tz)
