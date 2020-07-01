@@ -1,0 +1,132 @@
+! #####################################################################################
+! # Cisco DNA Spaces Connector ACL Jinj2 template
+! #####################################################################################
+! DNA Spaces Connector deployment guide
+! Ref: https://www.cisco.com/c/en/us/td/docs/wireless/cisco-dna-spaces/connector/b_connector/b_connector_chapter_010.html
+!
+! Jinja Templating:
+! https://jinja.palletsprojects.com/en/2.11.x/
+!
+! dna-connector : ip address of DNA Spaces connector
+! wlc-list : list of management ip address of Wireless LAN Controller
+! ap-subnet-list : list of ip subnets and inverse maskes of the AP's managed by the WLC
+! dns-server : ip address of the Domain Name Server configured on DNA Spaces Connector
+! nap-server : ip address of the NTP server configured on the DNA Spaces Connector
+!
+! Inbound ACL from DNA Spaces Connector
+!
+no ip access-list extended dna-spaces-connector-in
+ip access-list extended dna-spaces-connector-in
+!
+{% for wlc in wlc-list %}
+ !
+ remark SNMPv2/3 to WLC
+ permit udp host {{ dna-connector }} host {{ wlc }} eq 162
+ !
+ remark Netconf to 9800
+ permit tcp host {{ dna-connector }} host {{ wlc }} eq 830
+ !
+ remark TDL to 9800
+ permit tcp host {{ dna-connector }} host {{ wlc }} eq 8000
+ !
+ remark RADIUS for OpenRoaming
+ permit udp host {{ dna-connector }} eq 1812 host {{ wlc }}
+ !
+ remark NMSP connection to each WLC
+ permit tcp  host {{ dna-connector }} host {{ wlc }}  eq 16113
+{% endfor %}
+!
+{% for ap-subnet in ap-subnet-list %}
+ !
+ remark Fastlocate from AP
+ permit udp host {{ dna-connector }} eq 2003 {{ ap-subnet }} eq 9999
+ !
+ remark gRPC from AP
+ permit udp host {{ dna-connector }} eq 5000 {{ ap-subnet }}
+ {% endfor %}
+!
+remark HTTPS to DNA Spaces Primary – US/APJC
+permit tcp host {{ dna-connector }} host 52.20.144.155 eq 443
+permit tcp host {{ dna-connector }} host 34.231.154.95 eq 443
+permit tcp host {{ dna-connector }} host 54.176.92.81 eq 443
+permit tcp host {{ dna-connector }} host 54.183.58.225 eq 443
+!
+remark HTTPS to DNA Spaces Disaster Recovery – US/APJC
+permit tcp host {{ dna-connector }} host 54.176.92.81 eq 443
+permit tcp host {{ dna-connector }} host 54.183.58.225 eq 443
+!
+remark HTTPS to DNA Spaces Primary – EMEA
+permit tcp host {{ dna-connector }} host 63.33.127.190 eq 443
+permit tcp host {{ dna-connector }} host 63.33.175.64 eq 443
+!
+remark HTTPS to DNA Spaces Disaster Recovery – EMEA
+permit tcp host {{ dna-connector }} host 3.122.15.26 eq 443
+permit tcp host {{ dna-connector }} host 3.122.15.7 eq 443
+!
+remark DNS
+permit udp host {{ dna-connector }} host {{ dns-server }} eq domain
+!
+remark NTP
+permit udp host {{ dna-connector }} host {{ ntp-server }} eq ntp
+!
+deny ip any any
+!
+! Oubound ACL towards DNA Spaces Connector
+!
+no ip access-list extended dna-spaces-connector-out
+ip access-list extended dna-spaces-connector-out
+!
+{% for wlc in wlc-list %}
+ !
+ remark SNMPv2/3 to WLC
+ permit udp host {{ wlc }} eq 162 host {{ dna-connector }}
+ !
+ remark Netconf to 9800
+ permit tcp host {{ wlc }} eq 830 host {{ dna-connector }}
+ !
+ remark TDL to 9800
+ permit tcp host {{ wlc }} eq 8000 host {{ dna-connector }}
+ !
+ remark RADIUS for OpenRoaming
+ permit udp host {{ wlc }} host {{ dna-connector }} eq 1812
+ !
+ remark NMSP connection to each WLC
+ permit tcp host {{ wlc }} eq 16113 host {{ dna-connector }}
+!
+{% endfor %}
+{% for ap-subnet in ap-subnet-list %}
+ !
+ remark Fastlocate from AP
+ permit udp {{ ap-subnet}} eq 9999 host {{ dna-connector }} eq 2003
+ !
+ remark gRPC from AP
+ permit udp {{ ap-subnet }} host {{ dna-connector }} eq 5000
+{% endfor %}
+!
+remark HTTPS to DNA Spaces Primary – US/APJC
+permit tcp host 52.20.144.155 eq 443 host {{ dna-connector }}
+permit tcp host 34.231.154.95 eq 443 host {{ dna-connector }}
+permit tcp host 54.176.92.81 eq 443 host {{ dna-connector }}
+permit tcp host 54.183.58.225 eq 443 host {{ dna-connector }}
+!
+remark HTTPS to DNA Spaces Disaster Recovery – US/APJC
+permit tcp host 54.176.92.81 eq 443 host {{ dna-connector }}
+permit tcp host 54.183.58.225 eq 443 host {{ dna-connector }}
+!
+remark HTTPS to DNA Spaces Primary – EMEA
+permit tcp host 63.33.127.190 eq 443 host {{ dna-connector }}
+permit tcp host 63.33.175.64 eq 443 host {{ dna-connector }}
+!
+remark HTTPS to DNA Spaces Disaster Recovery – EMEA
+permit tcp host 3.122.15.26 eq 443 host {{ dna-connector }}
+permit tcp host 3.122.15.7 eq 443 host {{ dna-connector }}
+!
+remark DNS
+permit udp host {{ dns-server }} eq domain host {{ dna-connector }}
+!
+remark NTP
+permit udp host {{ ntp-server }} eq ntp host {{ dna-connector }}
+!
+deny ip any any
+!
+end
