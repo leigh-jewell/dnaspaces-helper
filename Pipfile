@@ -12,6 +12,7 @@ tzlocal = "*"
 pytest = "*"
 coverage = "*"
 httpretty = "*"
+jinja2 = "*"
 
 [requires]
 python_version = "3.7"
