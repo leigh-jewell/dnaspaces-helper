@@ -12,8 +12,9 @@ from os import path, access, W_OK, environ
 from get_date_range import get_date_range
 from convert_history import convert_history
 from get_date_range import convert_timestamp_millisecond
-from constants import URL
+from constants import URL, MAX_REQUEST_RETRIES, REQUEST_TIMEOUT
 from tzlocal import get_localzone
+from time import sleep
 
 
 def get_arguments(passed_in=None):
@@ -73,6 +74,32 @@ def valid_date(date):
         return False
 
 
+def get_api_response(payload, headers):
+    attempts = 0
+    current_timeout = REQUEST_TIMEOUT
+    while attempts < MAX_REQUEST_RETRIES:
+        try:
+            response = requests.get(URL, params=payload, headers=headers, stream=True, timeout=current_timeout)
+            if response.status_code == 200:
+                break
+            else:
+                logging.error(f"Error with API call got {response.status_code} and did not get a status code 200.")
+                attempts += 1
+        except requests.ConnectionError as e:
+            logging.error(f"Got a network connection error {e}. Please check {URL} is reachable.")
+            attempts += 1
+        except requests.Timeout as e:
+            logging.error(f"Got a timeout with request {e}. Incrementing timeout {current_timeout}")
+            current_timeout += 60
+            attempts += 1
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Got an unknown exception from requests {e}. Exiting.")
+            raise SystemExit(e)
+        sleep(5)
+
+    return response
+
+
 def get_client_history(time_tuples_list, write_file):
     token = get_config()
     lines_read = 0
@@ -93,18 +120,17 @@ def get_client_history(time_tuples_list, write_file):
                     payload = {"startTime": convert_timestamp_millisecond(start),
                                "endTime": convert_timestamp_millisecond(end)}
                     logging.debug(f"Using URL params {payload}")
-                    with requests.get(URL, params=payload, headers=headers, stream=True) as response:
-                        if response.status_code == 200:
-                            logging.info("Connected to DNA Spaces. Writing data to file. This will take a while.")
-                            for chunk in response.iter_lines(decode_unicode=True):
-                                print(chunk, file=f)
-                                lines_read += 1
-                            logging.info(f"Wrote {lines_read:,} lines to file {write_file}.")
-                            successful = True
-                        else:
-                            logging.error(f"Unable to connect to {URL}. Got status code {response.status_code}" +
-                                          f"Message {response.text}")
-                            break
+                    response = get_api_response(payload, headers)
+                    if response.status_code == 200:
+                        logging.info("Connected to DNA Spaces. Writing data to file. This will take a while.")
+                        for chunk in response.iter_lines(decode_unicode=True):
+                            print(chunk, file=f)
+                            lines_read += 1
+                        logging.info(f"Wrote {lines_read:,} lines to file {write_file}.")
+                    else:
+                        logging.error(f"Unable to connect to {URL}. Got status code {response.status_code}" +
+                                      f"Message {response.text}")
+                        break
                 else:
                     logging.error(f"Invalid start and/or end dates.")
     logging.info("Finished.")

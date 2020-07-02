@@ -2,7 +2,7 @@ from dnaspaces_get_history import get_arguments, get_config, check_file_writable
     get_client_history, valid_date, main
 import pytz
 import os
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from stat import S_IREAD, S_IRGRP, S_IROTH, S_IWUSR
 import httpretty
 from constants import URL
@@ -27,8 +27,8 @@ def test_get_client_history(tmpdir):
         status=200,
         content_type="text/csv",
     )
-    start = datetime(2020, 5, 29)
-    end = datetime(2020, 5, 30)
+    end = datetime.now()
+    start = end - timedelta(days=1)
     assert get_client_history([], "") == 0
     assert get_client_history([("invalid date", "invalid date")], "") == 0
     assert get_client_history([(start, end)], "") == 0
@@ -39,14 +39,17 @@ def test_get_client_history(tmpdir):
     assert df.shape == (1, 25)
     assert df.loc[0][0] == 16655
     assert df.loc[0][-1] == "10.10.10.10, fe80:0000:0000:0000:9c:ee:d0:aa:50:ee"
+    httpretty.disable()
+    httpretty.reset()
+    httpretty.enable()
     httpretty.register_uri(
         httpretty.GET,
         URL,
         status=400,
     )
     assert get_client_history([(start, end)], test_filename) == 0
-    httpretty.disable()  # disable afterwards, so that you will have no problems in code that uses that socket module
-    httpretty.reset()  # reset HTTPretty state (clean up registered urls and request his
+    httpretty.disable()
+    httpretty.reset()
 
 
 def test_main(tmpdir):
@@ -67,10 +70,15 @@ def test_main(tmpdir):
         status=200,
         content_type="text/csv",
     )
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(days=1)
+    start_str = start.strftime("%Y-%m-%d")
+    end_str = end.strftime("%Y-%m-%d")
+    os.environ["TOKEN"] = "DUMMY"
     del os.environ["TOKEN"]
-    assert main(["-st", "2020-05-29", "-et", "2020-05-30", "-f", test_filename]) is False
+    assert main(["-st", start_str, "-et", end_str, "-f", test_filename]) is False
     os.environ["TOKEN"] = "TEST_TOKEN"
-    assert main(["-st", "2020-05-29", "-et", "2020-05-30", "-f", test_filename])
+    assert main(["-st", start_str, "-et", end_str, "-f", test_filename])
     del os.environ["TOKEN"]
     httpretty.disable()
     httpretty.reset()
