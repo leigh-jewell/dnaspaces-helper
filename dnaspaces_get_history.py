@@ -20,14 +20,12 @@ from time import sleep
 def get_arguments(passed_in=None):
     parser = ArgumentParser()
     parser.add_argument("-st", "--start_time", dest="start_time",
-                        type=lambda s: datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%f"),
-                        default=datetime.now(timezone.utc) - timedelta(days=1),
+                        type=datetime.fromisoformat,
                         help="Start time in ISO format [YYY-MM-DDThh:mm:ss.s+TZD] "
                                "If not provided will use -1 day as start time. "
                                "End time will be start time +1 day if not provided.")
     parser.add_argument("-et", "--end_time", dest="end_time",
-                        type=lambda s: datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%f"),
-                        default=datetime.now(timezone.utc),
+                        type=datetime.fromisoformat,
                         help="End time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]")
     parser.add_argument("-tz", "--timezone", dest="timezone", type=str, default=str(get_localzone()),
                         help="Time zone database name e.g. Australia/Sydney")
@@ -35,11 +33,13 @@ def get_arguments(passed_in=None):
                         help="Filename to write the client history data into.")
     parser.add_argument("-nc", "--no_convert", dest="convert_time", default=True, action='store_false',
                         help="Stop the conversion of timestamp to localised date time.")
+    parser.add_argument("-ko", "--keep_original", dest="keep_original", default=False, action='store_false',
+                        help="Keep the original file with timestamps as .old")
     args = parser.parse_args(passed_in)
-    if args is not None:
-        logging.debug("Got arguments " +
-                      args.start_time.strftime("%Y-%m-%d %H:%M") + " " +
-                      args.end_time.strftime("%Y-%m-%d %H:%M"))
+    if args.start_time is not None:
+        logging.debug("Got arguments " + args.start_time.strftime("%Y-%m-%d %H:%M"))
+    if args.end_time is not None:
+        logging.debug("Got arguments " + args.end_time.strftime("%Y-%m-%d %H:%M"))
     return args
 
 
@@ -119,6 +119,7 @@ def get_client_history(time_tuples_list, write_file):
         with open(write_file, "w") as f:
             for (start, end) in time_tuples_list:
                 if valid_date(start) and valid_date(end):
+                    logging.info(f"Using date range {start} to {end}")
                     payload = {"startTime": convert_timestamp_millisecond(start),
                                "endTime": convert_timestamp_millisecond(end)}
                     logging.debug(f"Using URL params {payload}")
@@ -135,7 +136,6 @@ def get_client_history(time_tuples_list, write_file):
                         break
                 else:
                     logging.error(f"Invalid start and/or end dates.")
-    logging.info("Finished.")
     return lines_read
 
 
@@ -165,7 +165,8 @@ def main(passed_args=None):
     lines = get_client_history(time_split, filename)
     if lines > 0 and cmd_args.convert_time:
         logging.debug(f"Converting filename {filename} timestamps to local time with timezone {cmd_args.timezone}.")
-        convert_history(filename, cmd_args.timezone)
+        convert_history(filename, cmd_args.timezone, cmd_args.keep_original)
+    logging.info("Finished.")
     return lines > 0
 
 

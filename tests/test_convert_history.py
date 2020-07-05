@@ -34,15 +34,17 @@ def test_convert_history():
                         level=logging.DEBUG)
     df = pd.DataFrame({"sourcetimestamp": [1590019287571], "firstactiveat": [0], "changedon": [1590019287571]})
     df.to_csv("test_convert_history_tmp.csv")
-    new_filename = convert_history("test_convert_history_tmp.csv", "Australia/Sydney")
+    new_filename = convert_history("test_convert_history_tmp.csv", "Australia/Sydney", False)
     df_new = pd.read_csv(new_filename)
-    try:
-        os.remove("test_convert_history_tmp.csv")
-        os.remove("test_convert_history_tmp.csv" + ".old")
-    except OSError as e:
-        logging.error("Unable to delete test files. Got error", e)
-
+    assert os.path.isfile(new_filename)
     assert (df_new.sourcetimestamp[0] == '2020-05-21 10:01:27')
     assert (np.isnan(df_new.firstactiveat[0]))
     assert (df_new.changedon[0] == '2020-05-21 10:01:27')
-
+    new_filename = convert_history("test_convert_history_tmp.csv", "Australia/Sydney", True)
+    assert os.path.isfile(new_filename)
+    assert os.path.isfile(new_filename + ".old")
+    try:
+        os.remove("./test_convert_history_tmp.csv")
+        os.remove(new_filename + ".old")
+    except OSError as e:
+        logging.error("Unable to delete test files. Got error", e)

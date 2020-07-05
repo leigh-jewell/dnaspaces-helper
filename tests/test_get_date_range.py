@@ -24,6 +24,8 @@ def test_valid_time():
 
 def test_split_dates():
     end = datetime.now(timezone.utc)
+    one_day = end - timedelta(days=1)
+    assert len(split_dates(one_day, end)) == 1
     start = end - timedelta(days=10)
     assert len(split_dates(start, end)) == 10
     assert split_dates(start, end)[0] == (start, start + timedelta(days=1))
