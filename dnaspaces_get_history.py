@@ -82,10 +82,12 @@ def get_api_response(payload, headers):
     while attempts < MAX_REQUEST_RETRIES:
         try:
             response = requests.get(URL, params=payload, headers=headers, stream=True, timeout=current_timeout)
-            if response.status_code == 200:
+            if response.status_code == requests.codes.ok:
                 break
             else:
-                logging.error(f"Error with API call got {response.status_code} and did not get a status code 200.")
+                logging.error(f"{attempts}.Error with REST to DNA Spaces got {response.status_code} "
+                              f"should have got {requests.codes.ok}. Service may be too busy.")
+                logging.error(f"This is attempt {attempts} of maximum {MAX_REQUEST_RETRIES}. Retrying..")
                 attempts += 1
         except requests.ConnectionError as e:
             logging.error(f"Got a network connection error {e}. Please check {URL} is reachable.")
@@ -124,7 +126,7 @@ def get_client_history(time_tuples_list, write_file):
                                "endTime": convert_timestamp_millisecond(end)}
                     logging.debug(f"Using URL params {payload}")
                     response = get_api_response(payload, headers)
-                    if response.status_code == 200:
+                    if response.status_code == requests.codes.ok:
                         logging.info("Connected to DNA Spaces. Writing data to file. This will take a while.")
                         try:
                             for chunk in response.iter_lines(decode_unicode=True):

@@ -83,7 +83,7 @@ def timestamp_to_date(col):
 def convert_history(data_file, timezone, keep_original):
     logging.debug(f"Converting data file {data_file} from timestamp to local timezone.")
     date_cols = ["sourcetimestamp", "firstactiveat", "changedon"]
-    chunk_size = 10 ** 5
+    chunk_size = 10 ** 6
     first_chuck = True
     total_chunks = 0
     try:
@@ -103,7 +103,7 @@ def convert_history(data_file, timezone, keep_original):
                 except IOError as e:
                     logging.error(f"Unable to write csv file {data_file}. Got error {e}.")
                     return None
-        except IOError as e:
+        except pd.errors.EmptyDataError as e:
             logging.error(f"Unable to open csv file to convert. Got error {e}.")
             return None
     except IOError as e:
