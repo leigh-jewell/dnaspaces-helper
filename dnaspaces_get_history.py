@@ -19,12 +19,14 @@ from time import sleep
 
 def get_arguments(passed_in=None):
     parser = ArgumentParser()
-    parser.add_argument("-st", "--start_time", dest="start_time", type=datetime.fromisoformat,
+    parser.add_argument("-st", "--start_time", dest="start_time",
+                        type=lambda s: datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%f"),
                         default=datetime.now(timezone.utc) - timedelta(days=1),
                         help="Start time in ISO format [YYY-MM-DDThh:mm:ss.s+TZD] "
                                "If not provided will use -1 day as start time. "
                                "End time will be start time +1 day if not provided.")
-    parser.add_argument("-et", "--end_time", dest="end_time", type=datetime.fromisoformat,
+    parser.add_argument("-et", "--end_time", dest="end_time",
+                        type=lambda s: datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%f"),
                         default=datetime.now(timezone.utc),
                         help="End time ISO format [YYY-MM-DDThh:mm:ss.s+TZD]")
     parser.add_argument("-tz", "--timezone", dest="timezone", type=str, default=str(get_localzone()),
@@ -152,6 +154,11 @@ def main(passed_args=None):
                         datefmt='%Y-%m-%d %H:%M.%S',
                         filemode="a",
                         level=logging.DEBUG)
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(message)s')
+    console.setFormatter(formatter)
+    logging.getLogger('').addHandler(console)
     cmd_args = get_arguments(passed_args)
     time_split = get_date_range(cmd_args.start_time, cmd_args.end_time, cmd_args.timezone)
     filename = get_filename(cmd_args.filename)
