@@ -83,26 +83,36 @@ def timestamp_to_date(col):
 def convert_history(data_file, timezone, keep_original):
     logging.debug(f"Converting data file {data_file} from timestamp to local timezone.")
     date_cols = ["sourcetimestamp", "firstactiveat", "changedon"]
+    chunk_size = 10 ** 6
+    first_chuck = True
+    total_chunks = 0
     try:
-        df = pd.read_csv(data_file)
-    except IOError as e:
-        logging.error(f"Unable to open csv file to convert. Got error {e}.")
-        return None
-    # Some timestamps are zero and need to replace with Nan to avoid getting set to 1/1/1970
-    df[date_cols] = df[date_cols].replace(to_replace=0, value=np.nan)
-    df.update(df[date_cols].apply(pd.to_datetime, origin='unix', unit='ms', utc=True, errors="coerce"))
-    df.update(df[date_cols].apply(change_timezone, args=(timezone,)))
-    if keep_original:
+        tmp_data_file = data_file + ".old"
+        os.rename(data_file, tmp_data_file)
         try:
-            os.rename(data_file, data_file + ".old")
-        except IOError as e:
-            logging.error(f"Tried to rename old file {data_file}.old but failed with error{e}")
-    try:
-        df.to_csv(data_file, date_format='%Y-%m-%d %H:%M:%S.%f'[:-3])
-        logging.info(f"Converted file written to {data_file}.")
+            for df in pd.read_csv(tmp_data_file, chunksize=chunk_size):
+                # Some timestamps are zero and need to replace with Nan to avoid getting set to 1/1/1970
+                df[date_cols] = df[date_cols].replace(to_replace=0, value=np.nan)
+                df.update(df[date_cols].apply(pd.to_datetime, origin='unix', unit='ms', utc=True, errors="coerce"))
+                df.update(df[date_cols].apply(change_timezone, args=(timezone,)))
+                try:
+                    df.to_csv(data_file, date_format='%Y-%m-%d %H:%M:%S.%f'[:-3], mode='a', header=first_chuck)
+                    first_chuck = False
+                    total_chunks += chunk_size
+                    logging.info(f"Converted file chunk {total_chunks:,} written to {data_file}.")
+                except IOError as e:
+                    logging.error(f"Unable to write csv file {data_file}. Got error {e}.")
+                    return None
+        except pd.errors.EmptyDataError as e:
+            logging.error(f"Unable to open csv file to convert. Got error {e}.")
+            return None
     except IOError as e:
-        logging.error(f"Unable to write csv file {data_file}. Got error {e}.")
-        return None
+        logging.error(f"Tried to rename old file {data_file}.old but failed with error {e}")
+    if not keep_original:
+        try:
+            os.remove(tmp_data_file)
+        except IOError as e:
+            logging.error(f"Tried to delete old file {data_file}.old but failed with error {e}")
     return data_file
 
 
@@ -116,7 +126,7 @@ if __name__ == '__main__':
     parser.add_argument("-tz", "--timezone",
                         dest="timezone",
                         help="Time zone offset in hours minutes HH:MM e.g. 10:00 or -4:00")
-    parser.add_argument("-ko", "--keep_original", dest="keep_original", default=False, action='store_false',
+    parser.add_argument("-ko", "--keep_original", dest="keep_original", default=False, action='store_true',
                         help="Keep the original file with timestamps as .old")
     args = parser.parse_args()
     if args.timezone is None:
