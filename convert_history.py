@@ -24,6 +24,39 @@
 # maxdetectedslot, \
 # ipaddress
 
+history_dict = {
+    'tenantid': 'category',
+    'macaddress': 'str',
+    'devicetype': 'category',
+    'campusid': 'category',
+    'buildingid': 'category',
+    'floorid': 'category',
+    'floorhierarchy': 'str',
+    'coordinatex': 'str',
+    'coordinatey': 'str',
+    'sourcetimestamp': 'str',
+    'maxdetectedapmac': 'str',
+    'maxdetectedband': 'category',
+    'detectingcontrollers': 'category',
+    'firstactiveat': 'str',
+    'locatedsinceactivecount': 'str',
+    'changedon': 'str',
+    'manufacturer': 'str',
+    'associated': 'str',
+    'maxdetectedrssi': 'str',
+    'ssid': 'category',
+    'username': 'str',
+    'associatedapmac': 'str',
+    'associatedaprssi': 'str',
+    'maxdetectedslot': 'str',
+    'ipaddress': 'str',
+    'staticdevice': 'str',
+    'recordtype': 'str',
+    'computetype': 'str',
+    'source': 'str',
+    'machashed': 'str',
+}
+
 from argparse import ArgumentParser
 import logging
 import pandas as pd

@@ -33,7 +33,7 @@ def get_arguments(passed_in=None):
                         help="Filename to write the client history data into.")
     parser.add_argument("-nc", "--no_convert", dest="convert_time", default=True, action='store_false',
                         help="Stop the conversion of timestamp to localised date time.")
-    parser.add_argument("-ko", "--keep_original", dest="keep_original", default=False, action='store_false',
+    parser.add_argument("-ko", "--keep_original", dest="keep_original", default=False, action='store_true',
                         help="Keep the original file with timestamps as .old")
     args = parser.parse_args(passed_in)
     if args.start_time is not None:
@@ -126,9 +126,14 @@ def get_client_history(time_tuples_list, write_file):
                     response = get_api_response(payload, headers)
                     if response.status_code == 200:
                         logging.info("Connected to DNA Spaces. Writing data to file. This will take a while.")
-                        for chunk in response.iter_lines(decode_unicode=True):
-                            print(chunk, file=f)
-                            lines_read += 1
+                        try:
+                            for chunk in response.iter_lines(decode_unicode=True):
+                                print(chunk, file=f)
+                                lines_read += 1
+                        except requests.exceptions.Timeout as e:
+                            logging.error(f"Connection timed out. Not all data was received. {e}")
+                        except requests.exceptions.RequestException as e:
+                            logging.error(f"Got an exception with the connection. Not all data was received. {e}")
                         logging.info(f"Wrote {lines_read:,} lines to file {write_file}.")
                     else:
                         logging.error(f"Unable to connect to {URL}. Got status code {response.status_code}" +
