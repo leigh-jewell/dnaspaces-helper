@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import logging
 import pytz
 from tzlocal import get_localzone
-from constants import MAX_DAYS
+from constants import MAX_DAYS, HOURLY_TIME_CHUNK_SIZE
 
 
 def valid_time(start, end):
@@ -48,18 +48,18 @@ def valid_time(start, end):
 
 
 def split_dates(start=None, end=None):
-    # Create a list of tuples (start_time, end_time) that are each 1 day apart + end time
+    # Create a list of tuples (start_time, end_time) that are each chunked CHUNK_SIZE apart + end time
     time_range_list = []
     if valid_time(start, end):
-        one_day = timedelta(days=1)
+        time_chunk = timedelta(hours=HOURLY_TIME_CHUNK_SIZE)
         time_range_list = []
-        while start + one_day < end:
-            time_range_list.append((start, start + one_day))
-            start += one_day
-            logging.debug(f"Append {start} to {start + one_day} to time range")
+        while start + time_chunk < end:
+            time_range_list.append((start, start + time_chunk))
+            start += time_chunk
+            logging.debug(f"Append {start} to {start + time_chunk} to time range")
         time_range_list.append((start, end))
         logging.debug(f"Append {start} to {end} to time range")
-    logging.debug(f"Split time range into {len(time_range_list)} days")
+    logging.debug(f"Split time range into {len(time_range_list)} time chunks.")
     return time_range_list
 
 

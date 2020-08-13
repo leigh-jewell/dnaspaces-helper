@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from get_date_range import valid_time, split_dates, add_timezone, convert_timestamp_millisecond, get_date_range
 from tzlocal import get_localzone
 import pytz
-from constants import MAX_DAYS
+from constants import MAX_DAYS, HOURLY_TIME_CHUNK_SIZE
 
 
 def test_valid_time():
@@ -25,11 +25,11 @@ def test_valid_time():
 def test_split_dates():
     end = datetime.now(timezone.utc)
     one_day = end - timedelta(days=1)
-    assert len(split_dates(one_day, end)) == 1
+    assert len(split_dates(one_day, end)) == 24/HOURLY_TIME_CHUNK_SIZE
     start = end - timedelta(days=10)
-    assert len(split_dates(start, end)) == 10
-    assert split_dates(start, end)[0] == (start, start + timedelta(days=1))
-    assert split_dates(start, end)[-1] == (start + timedelta(days=9), end)
+    assert len(split_dates(start, end)) == 10*(24/HOURLY_TIME_CHUNK_SIZE)
+    assert split_dates(start, end)[0] == (start, start + timedelta(hours=HOURLY_TIME_CHUNK_SIZE))
+    assert split_dates(start, end)[-1] == (start + timedelta(days=9, hours=24-HOURLY_TIME_CHUNK_SIZE), end)
 
 
 def test_add_timezone():
@@ -57,8 +57,8 @@ def test_get_date_range():
     end2 = datetime.fromisoformat(end_str + "T10:00")
     dates2 = get_date_range(start2, end2)
     dates3 = get_date_range(start2, end2, "Australia/Sydney")
-    assert len(dates1) == 1
-    assert dates1[0] == (start1, start1 + timedelta(days=1))
+    assert len(dates1) == 24/HOURLY_TIME_CHUNK_SIZE
+    assert dates1[0] == (start1, start1 + timedelta(hours=HOURLY_TIME_CHUNK_SIZE))
     assert str(dates1[0][0].utcoffset()) == "10:00:00"
     assert str(dates1[0][1].utcoffset()) == "10:00:00"
     assert str(dates2[0][0].tzinfo) in pytz.all_timezones
