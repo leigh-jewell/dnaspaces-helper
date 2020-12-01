@@ -82,6 +82,7 @@ optional arguments:
                         Filename to write the client history data into.
   -nc, --no_convert     Stop the conversion of timestamp to localised date
                         time.
+  -ko, --keep_original  Keep the original file with timestamps before conversion.
 ```
 
 ## Examples:
