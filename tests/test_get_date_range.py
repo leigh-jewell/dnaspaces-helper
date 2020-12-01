@@ -4,6 +4,7 @@ from get_date_range import valid_time, split_dates, add_timezone, convert_timest
 from tzlocal import get_localzone
 import pytz
 from constants import MAX_DAYS, HOURLY_TIME_CHUNK_SIZE
+import time
 
 
 def test_valid_time():
@@ -50,17 +51,26 @@ def test_get_date_range():
     start = end - timedelta(days=1)
     end_str = end.strftime("%Y-%m-%d")
     start_str = start.strftime("%Y-%m-%d")
-    start1 = datetime.fromisoformat(start_str + "T10:00+10:00")
-    end1 = datetime.fromisoformat(end_str + "T10:00+10:00")
-    dates1 = get_date_range(start1, end1)
-    start2 = datetime.fromisoformat(start_str + "T10:00")
-    end2 = datetime.fromisoformat(end_str + "T10:00")
+    current_time = time.localtime()
+    if current_time.tm_isdst:
+        # Daylight savings in effect
+        start1 = datetime.fromisoformat(start_str + "T10:00+11:00")
+        end1 = datetime.fromisoformat(end_str + "T10:00+11:00")
+        dates1 = get_date_range(start1, end1)
+        start2 = datetime.fromisoformat(start_str + "T11:00")
+        end2 = datetime.fromisoformat(end_str + "T10:00")
+    else:
+        start1 = datetime.fromisoformat(start_str + "T10:00+10:00")
+        end1 = datetime.fromisoformat(end_str + "T10:00+10:00")
+        dates1 = get_date_range(start1, end1)
+        start2 = datetime.fromisoformat(start_str + "T10:00")
+        end2 = datetime.fromisoformat(end_str + "T10:00")
     dates2 = get_date_range(start2, end2)
     dates3 = get_date_range(start2, end2, "Australia/Sydney")
     assert len(dates1) == 24/HOURLY_TIME_CHUNK_SIZE
     assert dates1[0] == (start1, start1 + timedelta(hours=HOURLY_TIME_CHUNK_SIZE))
-    assert str(dates1[0][0].utcoffset()) == "10:00:00"
-    assert str(dates1[0][1].utcoffset()) == "10:00:00"
+    assert str(dates1[0][0].utcoffset()) == str(start1.utcoffset())
+    assert str(dates1[0][1].utcoffset()) == str(start1.utcoffset())
     assert str(dates2[0][0].tzinfo) in pytz.all_timezones
     assert str(dates2[0][0].tzinfo) == str(get_localzone())
     assert str(dates2[0][1].tzinfo) == str(get_localzone())
