@@ -48,8 +48,6 @@ ip access-list extended dna-spaces-connector-in
 remark HTTPS to DNA Spaces Primary – US/APJC
 permit tcp host {{ dna-connector }} host 52.20.144.155 eq 443
 permit tcp host {{ dna-connector }} host 34.231.154.95 eq 443
-permit tcp host {{ dna-connector }} host 54.176.92.81 eq 443
-permit tcp host {{ dna-connector }} host 54.183.58.225 eq 443
 !
 remark HTTPS to DNA Spaces Disaster Recovery – US/APJC
 permit tcp host {{ dna-connector }} host 54.176.92.81 eq 443
@@ -106,8 +104,6 @@ ip access-list extended dna-spaces-connector-out
 remark HTTPS to DNA Spaces Primary – US/APJC
 permit tcp host 52.20.144.155 eq 443 host {{ dna-connector }}
 permit tcp host 34.231.154.95 eq 443 host {{ dna-connector }}
-permit tcp host 54.176.92.81 eq 443 host {{ dna-connector }}
-permit tcp host 54.183.58.225 eq 443 host {{ dna-connector }}
 !
 remark HTTPS to DNA Spaces Disaster Recovery – US/APJC
 permit tcp host 54.176.92.81 eq 443 host {{ dna-connector }}

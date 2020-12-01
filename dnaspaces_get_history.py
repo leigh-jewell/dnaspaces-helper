@@ -118,6 +118,7 @@ def get_client_history(time_tuples_list, write_file):
         token_str = "Bearer " + token
         headers = {"Authorization": token_str}
         logging.info("Connecting to DNA Spaces. This may take a minute or two.")
+        printed_header = False
         with open(write_file, "w") as f:
             for (start, end) in time_tuples_list:
                 if valid_date(start) and valid_date(end):
@@ -128,9 +129,16 @@ def get_client_history(time_tuples_list, write_file):
                     response = get_api_response(payload, headers)
                     if response.status_code == requests.codes.ok:
                         logging.info("Connected to DNA Spaces. Writing data to file. This will take a while.")
+                        new_request = True
+                        chunk_line_count = 0
                         try:
                             for chunk in response.iter_lines(decode_unicode=True):
-                                print(chunk, file=f)
+                                if chunk_line_count > 0:
+                                    print(chunk, file=f)
+                                elif not printed_header and new_request:
+                                    print(chunk, file=f)
+                                    printed_header = True
+                                chunk_line_count += 1
                                 lines_read += 1
                         except requests.exceptions.Timeout as e:
                             logging.error(f"Connection timed out. Not all data was received. {e}")
