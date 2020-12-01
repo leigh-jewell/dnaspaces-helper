@@ -64,7 +64,7 @@ import numpy as np
 from pytz import all_timezones
 from tzlocal import get_localzone
 import os
-
+from constants import CONVERT_FILE_CHUNK_SIZE
 
 def change_timezone(col, timezone):
     # Must have tz set otherwise will fail
@@ -83,7 +83,7 @@ def timestamp_to_date(col):
 def convert_history(data_file, timezone, keep_original):
     logging.debug(f"Converting data file {data_file} from timestamp to local timezone.")
     date_cols = ["sourcetimestamp", "firstactiveat", "changedon"]
-    chunk_size = 10 ** 6
+    chunk_size = CONVERT_FILE_CHUNK_SIZE
     first_chuck = True
     total_chunks = 0
     try:
